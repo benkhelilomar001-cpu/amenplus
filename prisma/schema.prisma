@@ -1,0 +1,182 @@
+// AmenPlus data model.
+// Local: SQLite. Production: switch `provider` to "postgresql" and set DATABASE_URL (see README).
+// String "enums" are validated in lib/constants.ts (SQLite has no native enums).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id           String                @id @default(cuid())
+  slug         String                @unique
+  order        Int                   @default(0)
+  visible      Boolean               @default(true)
+  image        String?
+  translations CategoryTranslation[]
+  products     Product[]
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+}
+
+model CategoryTranslation {
+  id         String   @id @default(cuid())
+  categoryId String
+  locale     String
+  name       String
+  intro      String   @default("")
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, locale])
+}
+
+model Product {
+  id           String               @id @default(cuid())
+  slug         String               @unique
+  reference    String?
+  categoryId   String
+  category     Category             @relation(fields: [categoryId], references: [id])
+  availability String? // STANDARD | CUSTOM | BOTH — null when not confirmed
+  usage        String? // RESIDENTIAL | PROFESSIONAL | BOTH — null when not confirmed
+  visible      Boolean              @default(true)
+  featured     Boolean              @default(false)
+  isDemo       Boolean              @default(false)
+  order        Int                  @default(0)
+  translations ProductTranslation[]
+  images       ProductImage[]
+  quoteItems   QuoteItem[]
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+}
+
+model ProductTranslation {
+  id          String  @id @default(cuid())
+  productId   String
+  locale      String
+  name        String
+  summary     String  @default("")
+  description String  @default("")
+  // Only filled once AmenPlus confirms them. Empty = not shown on the site.
+  dimensions  String?
+  materials   String?
+  finishes    String?
+  options     String?
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, locale])
+}
+
+model ProductImage {
+  id            String  @id @default(cuid())
+  productId     String
+  url           String
+  order         Int     @default(0)
+  isInspiration Boolean @default(false)
+  product       Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Project {
+  id           String               @id @default(cuid())
+  slug         String               @unique
+  spaceType    String // RESIDENTIAL | OFFICE | HOSPITALITY | OTHER
+  visible      Boolean              @default(true)
+  featured     Boolean              @default(false)
+  isDemo       Boolean              @default(false)
+  order        Int                  @default(0)
+  translations ProjectTranslation[]
+  images       ProjectImage[]
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+}
+
+model ProjectTranslation {
+  id          String  @id @default(cuid())
+  projectId   String
+  locale      String
+  title       String
+  summary     String  @default("")
+  description String  @default("")
+  location    String?
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, locale])
+}
+
+model ProjectImage {
+  id            String  @id @default(cuid())
+  projectId     String
+  url           String
+  order         Int     @default(0)
+  isInspiration Boolean @default(false)
+  project       Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model QuoteRequest {
+  id               String            @id @default(cuid())
+  reference        String            @unique
+  kind             String            @default("QUOTE") // QUOTE | CONTACT
+  status           String            @default("NEW") // see QUOTE_STATUSES
+  locale           String
+  customerType     String // INDIVIDUAL | PROFESSIONAL
+  name             String
+  company          String?
+  email            String?
+  phone            String?
+  preferredContact String? // EMAIL | PHONE | WHATSAPP
+  region           String?
+  city             String?
+  categorySlug     String?
+  description      String
+  dimensions       String?
+  finish           String?
+  budget           String?
+  desiredDate      String?
+  consentAt        DateTime
+  items            QuoteItem[]
+  attachments      QuoteAttachment[]
+  notes            QuoteNote[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model QuoteItem {
+  id          String       @id @default(cuid())
+  quoteId     String
+  productId   String?
+  productName String
+  productSlug String?
+  quantity    Int          @default(1)
+  note        String?
+  quote       QuoteRequest @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  product     Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+}
+
+model QuoteAttachment {
+  id           String       @id @default(cuid())
+  quoteId      String
+  originalName String
+  storedName   String
+  mime         String
+  size         Int
+  quote        QuoteRequest @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+}
+
+model QuoteNote {
+  id        String       @id @default(cuid())
+  quoteId   String
+  body      String
+  createdAt DateTime     @default(now())
+  quote     QuoteRequest @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+}
+
+model Setting {
+  key   String @id
+  value String
+}
