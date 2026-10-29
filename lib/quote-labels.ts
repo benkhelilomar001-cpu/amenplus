@@ -10,7 +10,7 @@ export async function getQuoteLabels(locale: Locale) {
     "INDIVIDUAL", "PROFESSIONAL", "name", "company", "email", "phone", "contactHint", "preferredContact",
     "EMAIL", "PHONE", "WHATSAPP", "region", "regionPlaceholder", "city", "category", "categoryPlaceholder",
     "description", "descriptionPlaceholder", "message", "dimensions", "dimensionsPlaceholder", "finish",
-    "budget", "desiredDate", "optional", "required", "files", "filesHint", "filesTooMany", "fileTooBig",
+    "budget", "desiredDate", "optional", "required", "files", "filesHint", "filesTooMany", "fileTooBig", "filesTotalTooBig",
     "fileBadType", "removeFile", "consent", "privacyLink", "submit", "submitContact", "submitting",
     "errorSummary", "genericError", "rateLimited", "successTitle", "successText", "successContactTitle",
     "newRequest", "noPayment",

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { QUOTE_FILES } from "@/lib/constants";
+import { MAX_UPLOAD_TOTAL, QUOTE_FILES } from "@/lib/constants";
 import { fieldErrors, quoteSchema } from "@/lib/quote-schema";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { deleteStoredFile, saveFile, sniffMime } from "@/lib/storage";
@@ -52,7 +52,8 @@ export async function POST(req: Request) {
 
   // Attachments: count, size and real file type (checked from the bytes, not the browser's claim).
   const files = form.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
-  if (files.length > (data.kind === "QUOTE" ? QUOTE_FILES.maxFiles : 0)) {
+  const totalSize = files.reduce((sum, f) => sum + f.size, 0);
+  if (files.length > (data.kind === "QUOTE" ? QUOTE_FILES.maxFiles : 0) || totalSize > MAX_UPLOAD_TOTAL) {
     return json({ ok: false, errors: { files: "invalid" } }, 422);
   }
   const uploads: { bytes: Uint8Array; mime: string; name: string; size: number }[] = [];

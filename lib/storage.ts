@@ -3,14 +3,14 @@ import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
-// Files live outside /public so they persist across builds:
-//   <STORAGE_DIR>/uploads  → admin photos, served publicly via /media/<name>
-//   <STORAGE_DIR>/quotes   → quote attachments, served only to the admin
-// On serverless hosting, replace these functions with an object store (S3, R2…).
+// Two buckets:
+//   uploads → admin photos, served publicly via /media/<name>
+//   quotes  → quote attachments, served only to the admin
+// Two drivers:
+//   STORAGE_DRIVER="netlify" → Netlify Blobs (Netlify's disk is not persistent)
+//   anything else            → files in STORAGE_DIR (local dev, VPS)
 
-const root = path.resolve(process.env.STORAGE_DIR || "./storage");
-const dirs = { uploads: path.join(root, "uploads"), quotes: path.join(root, "quotes") } as const;
-type Bucket = keyof typeof dirs;
+type Bucket = "uploads" | "quotes";
 
 const SAFE_NAME = /^[a-f0-9-]{36}\.(jpg|png|webp|avif|pdf)$/;
 
@@ -38,25 +38,73 @@ export function sniffMime(bytes: Uint8Array): string | null {
   return null;
 }
 
+type Driver = {
+  put(bucket: Bucket, name: string, bytes: Uint8Array): Promise<void>;
+  get(bucket: Bucket, name: string): Promise<Uint8Array | null>;
+  remove(bucket: Bucket, name: string): Promise<void>;
+};
+
+const fileDriver = (): Driver => {
+  const root = path.resolve(process.env.STORAGE_DIR || "./storage");
+  const dir = (bucket: Bucket) => path.join(root, bucket);
+  return {
+    async put(bucket, name, bytes) {
+      await mkdir(dir(bucket), { recursive: true });
+      await writeFile(path.join(dir(bucket), name), bytes);
+    },
+    async get(bucket, name) {
+      try {
+        return new Uint8Array(await readFile(path.join(dir(bucket), name)));
+      } catch {
+        return null;
+      }
+    },
+    async remove(bucket, name) {
+      await unlink(path.join(dir(bucket), name)).catch(() => undefined);
+    },
+  };
+};
+
+const netlifyDriver = (): Driver => {
+  // Imported lazily so local dev never loads it.
+  const store = async (bucket: Bucket) => {
+    const { getStore } = await import("@netlify/blobs");
+    return getStore({ name: `amenplus-${bucket}`, consistency: "strong" });
+  };
+  return {
+    async put(bucket, name, bytes) {
+      const copy = new Uint8Array(bytes.byteLength);
+      copy.set(bytes);
+      await (await store(bucket)).set(name, copy.buffer);
+    },
+    async get(bucket, name) {
+      const data = await (await store(bucket)).get(name, { type: "arrayBuffer" });
+      return data ? new Uint8Array(data) : null;
+    },
+    async remove(bucket, name) {
+      await (await store(bucket)).delete(name);
+    },
+  };
+};
+
+// NETLIFY_BLOBS_CONTEXT is injected by Netlify at runtime, so Blobs are used there even if STORAGE_DRIVER is missing.
+const useNetlify = process.env.STORAGE_DRIVER === "netlify" || Boolean(process.env.NETLIFY_BLOBS_CONTEXT);
+const driver: Driver = useNetlify ? netlifyDriver() : fileDriver();
+
 export async function saveFile(bucket: Bucket, bytes: Uint8Array, mime: string): Promise<string> {
   const ext = EXT_BY_MIME[mime];
   if (!ext) throw new Error(`Unsupported type ${mime}`);
-  await mkdir(dirs[bucket], { recursive: true });
   const name = `${randomUUID()}.${ext}`;
-  await writeFile(path.join(dirs[bucket], name), bytes);
+  await driver.put(bucket, name, bytes);
   return name;
 }
 
-export async function readStoredFile(bucket: Bucket, name: string): Promise<Buffer | null> {
+export async function readStoredFile(bucket: Bucket, name: string): Promise<Uint8Array | null> {
   if (!SAFE_NAME.test(name)) return null;
-  try {
-    return await readFile(path.join(dirs[bucket], name));
-  } catch {
-    return null;
-  }
+  return driver.get(bucket, name);
 }
 
 export async function deleteStoredFile(bucket: Bucket, name: string): Promise<void> {
   if (!SAFE_NAME.test(name)) return;
-  await unlink(path.join(dirs[bucket], name)).catch(() => undefined);
+  await driver.remove(bucket, name).catch(() => undefined);
 }

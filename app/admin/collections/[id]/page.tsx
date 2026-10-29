@@ -1,3 +1,4 @@
+import { PhotoInput } from "@/components/admin/PhotoInput";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
@@ -46,7 +47,7 @@ export default async function CategoryEdit({
                 <Checkbox name="removeImage" label="Retirer cette photo" />
               </div>
             )}
-            <input type="file" name="photo" accept="image/jpeg,image/png,image/webp,image/avif" className="text-sm" />
+            <PhotoInput name="photo" />
           </div>
         </Card>
         {LOCALE_TABS.map(({ code, label, dir }) => (

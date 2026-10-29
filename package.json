@@ -4,16 +4,19 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "prisma migrate deploy && next build",
     "start": "next start",
     "lint": "eslint",
-    "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "typecheck": "tsc --noEmit",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "db:local": "pglite-server --db=./.pglite --port=5433 --max-connections=4",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed:netlify": "dotenv -e netlify.env -o -- tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@netlify/blobs": "^11.1.7",
     "@prisma/client": "^6.19.3",
     "lucide-react": "^1.64.0",
     "motion": "^14.7.1",
@@ -26,11 +29,14 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.13",
+    "@electric-sql/pglite-socket": "^0.2.16",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv-cli": "^11.1.0",
     "eslint": "^9",
     "eslint-config-next": "15.5.28",
     "tailwindcss": "^4",

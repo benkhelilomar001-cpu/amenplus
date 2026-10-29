@@ -9,18 +9,22 @@ Site premium pour AmenPlus, fabricant de mobilier en bois à La Soukra (Tunisie)
 
 ## Stack
 
-Next.js 15 (App Router) · TypeScript strict · Tailwind CSS v4 · next-intl (traductions résolues côté serveur) · Prisma (SQLite en local, Postgres conseillé en production) · Zod (validation identique côté navigateur et côté serveur) · Motion · Lucide.
+Next.js 15 (App Router) · TypeScript strict · Tailwind CSS v4 · next-intl (traductions résolues côté serveur) · Prisma + Postgres (Neon en production, PGlite en local) · Netlify + Netlify Blobs · Zod (validation identique côté navigateur et côté serveur) · Motion · Lucide.
 
 Pourquoi pas WordPress + WooCommerce comme le suggère le cahier des charges ? PHP n'était pas disponible pour tester, et cette stack couvre les mêmes besoins (catalogue, devis multi-produits, trilingue + RTL, admin) sans extensions payantes (WPML, plugin de devis), avec de meilleures performances.
 
 ## Lancer en local
 
+Il faut deux terminaux :
+
 ```bash
-npm install
-npx prisma db push      # crée la base SQLite prisma/dev.db
-npm run db:seed         # 6 collections + contenus de démonstration
-npm run dev             # http://localhost:3000
+npm run db:local        # terminal 1 : Postgres local (PGlite, données dans .pglite/), à laisser ouvert
 ```
+```bash
+npm install && npm run db:migrate && npm run db:seed && npm run dev   # terminal 2 : http://localhost:3000
+```
+
+`db:migrate` crée les tables et `db:seed` ajoute les 6 collections et les contenus de démonstration. Dans `.env`, les adresses locales se terminent par `&pgbouncer=true`, que PGlite exige.
 
 L'admin est sur http://localhost:3000/admin. Le mot de passe local est dans `.env` (`ADMIN_PASSWORD`).
 
@@ -32,7 +36,9 @@ Voir `.env.example`.
 
 | Variable | Rôle |
 | --- | --- |
-| `DATABASE_URL` | Base de données |
+| `DATABASE_URL` | Base Postgres (Neon : adresse avec `-pooler`) |
+| `DIRECT_URL` | Base Postgres, adresse directe (utilisée par les migrations) |
+| `STORAGE_DRIVER` | `netlify` sur Netlify (fichiers dans Netlify Blobs), vide sinon |
 | `SITE_URL` | URL publique (sitemap, balises canonical, hreflang, Open Graph) |
 | `ADMIN_PASSWORD` | Mot de passe de `/admin` (long et aléatoire) |
 | `ADMIN_SESSION_SECRET` | Clé de signature des sessions admin (64 caractères hexadécimaux) |
@@ -44,19 +50,11 @@ Sans e-mail configuré, les demandes sont quand même enregistrées et visibles 
 
 ## Mise en ligne
 
-**Option conseillée : un petit serveur Node (VPS).** Le site fonctionne tel quel :
+**Gratuit : GitHub + Netlify + Neon.** Tout est prêt : `netlify.toml`, la migration `prisma/migrations/0_init` et le stockage Netlify Blobs. Le pas-à-pas est dans **[DEPLOY-NETLIFY.md](DEPLOY-NETLIFY.md)**, et les variables à importer dans Netlify sont dans `netlify.env` (fichier local, exclu de git).
 
-```bash
-npm ci && npx prisma db push && npm run build && npm start
-```
+**Plus tard, sur un VPS** : `npm ci && npm run build && npm start` derrière Nginx ou Caddy, avec une base Postgres et `STORAGE_DRIVER` vide (les fichiers vont alors dans `STORAGE_DIR`, à sauvegarder).
 
-Placez-le derrière Nginx ou Caddy (HTTPS), avec un gestionnaire de processus (pm2 ou systemd). Sauvegardez chaque jour `prisma/dev.db` (ou la base Postgres) et le dossier `storage/`.
-
-**Hébergement serverless (Vercel, Netlify…)** : il faut deux changements, car le disque n'y est pas persistant.
-1. Postgres (Neon, Supabase…) : dans `prisma/schema.prisma`, mettre `provider = "postgresql"`, puis renseigner `DATABASE_URL`.
-2. Stockage objet (S3, Cloudflare R2…) : remplacer les fonctions de `lib/storage.ts`, qui sont isolées pour ça.
-
-Le limiteur anti-spam (`lib/rate-limit.ts`) est en mémoire. En multi-instance, il faut le brancher sur Redis.
+Les envois sont limités à 4 Mo par requête (limite Netlify de ~6 Mo) ; les photos sont allégées dans le navigateur (`lib/compress-image.ts`). Le limiteur anti-spam (`lib/rate-limit.ts`) est en mémoire : en multi-instance, il faut le brancher sur Redis.
 
 ## Organisation du code
 
@@ -109,4 +107,5 @@ Les photos de `public/images/demo/` (fournies pour la maquette) sont des **photo
 - Parcours complet testé sur mobile : ajout au panier, erreurs de formulaire (toutes affichées en même temps), envoi avec pièce jointe, référence AP-2026-0001 enregistrée, fichier stocké hors du dossier public.
 - Admin : redirection vers la connexion, changement de statut, note interne, modification d'un produit visible tout de suite sur le site.
 - `npm run build`, `tsc` et ESLint passent.
-- **Pas encore fait :** test Lighthouse, test de l'envoi d'e-mails (aucune clé configurée), test sur un vrai téléphone.
+- Postgres (PGlite local) : build de production, demande de devis avec une photo de 46 Mo réduite à 1,2 Mo, ajout de photo depuis l'admin.
+- **Pas encore fait :** déploiement réel sur Netlify + Neon, test Lighthouse, envoi d'e-mails (aucune clé configurée), test sur un vrai téléphone.

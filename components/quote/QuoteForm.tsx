@@ -6,7 +6,8 @@ import { useRef, useState } from "react";
 import { CheckCircle2, FileText, Loader2, Minus, Paperclip, Plus, Trash2, X } from "lucide-react";
 import { quoteCart, useQuoteCart } from "@/lib/quote-cart";
 import { crossFieldErrors, fieldErrors, quoteSchema, type FieldErrorCode } from "@/lib/quote-schema";
-import { QUOTE_FILES, type ContactMethod, type CustomerType, type Locale } from "@/lib/constants";
+import { MAX_UPLOAD_TOTAL, QUOTE_FILES, type ContactMethod, type CustomerType, type Locale } from "@/lib/constants";
+import { compressImage } from "@/lib/compress-image";
 import type { QuoteLabels } from "@/lib/quote-labels";
 
 type Option = { value: string; label: string };
@@ -87,21 +88,25 @@ export function QuoteForm({ mode, locale, labels, products = {}, categories = []
     }
   };
 
-  const addFiles = (list: FileList | null) => {
-    if (!list) return;
+  const addFiles = async (list: File[]) => {
     setFileError("");
     const next = [...files];
-    for (const f of Array.from(list)) {
+    for (const original of list) {
       if (next.length >= QUOTE_FILES.maxFiles) {
         setFileError(labels.filesTooMany);
         break;
       }
-      if (!(QUOTE_FILES.mimes as readonly string[]).includes(f.type)) {
-        setFileError(fill(labels.fileBadType, { name: f.name }));
+      if (!(QUOTE_FILES.mimes as readonly string[]).includes(original.type)) {
+        setFileError(fill(labels.fileBadType, { name: original.name }));
         continue;
       }
+      const f = await compressImage(original);
       if (f.size > QUOTE_FILES.maxBytes) {
         setFileError(fill(labels.fileTooBig, { name: f.name }));
+        continue;
+      }
+      if (next.reduce((sum, x) => sum + x.size, 0) + f.size > MAX_UPLOAD_TOTAL) {
+        setFileError(labels.filesTotalTooBig);
         continue;
       }
       next.push(f);
@@ -372,8 +377,9 @@ export function QuoteForm({ mode, locale, labels, products = {}, categories = []
                   className="sr-only"
                   aria-describedby="files-hint"
                   onChange={(e) => {
-                    addFiles(e.target.files);
+                    const picked = Array.from(e.target.files ?? []);
                     e.target.value = "";
+                    void addFiles(picked);
                   }}
                 />
               </label>

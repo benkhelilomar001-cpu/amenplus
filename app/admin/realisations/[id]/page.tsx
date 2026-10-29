@@ -1,3 +1,4 @@
+import { PhotoInput } from "@/components/admin/PhotoInput";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
@@ -84,7 +85,7 @@ export default async function ProjectEdit({
         ))}
         <Card>
           <h2 className="mb-4 font-display text-lg">Ajouter des photos</h2>
-          <input type="file" name="photos" multiple accept="image/jpeg,image/png,image/webp,image/avif" className="text-sm" />
+          <PhotoInput name="photos" multiple />
         </Card>
         <div className="flex justify-end">
           <SubmitButton />

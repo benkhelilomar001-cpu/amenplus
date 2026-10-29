@@ -33,17 +33,21 @@ export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
   LOST: "Perdue",
 };
 
+// Netlify Functions reject request bodies above ~6 MB, so uploads stay under 4 MB per request
+// (photos are shrunk in the browser first, see lib/compress-image.ts).
+export const MAX_UPLOAD_TOTAL = 4 * 1024 * 1024;
+
 /** Upload limits for quote attachments (public form). */
 export const QUOTE_FILES = {
   maxFiles: 3,
-  maxBytes: 8 * 1024 * 1024,
+  maxBytes: MAX_UPLOAD_TOTAL,
   mimes: ["image/jpeg", "image/png", "image/webp", "application/pdf"] as const,
   accept: ".jpg,.jpeg,.png,.webp,.pdf",
 };
 
 /** Upload limits for admin photos. */
 export const ADMIN_IMAGES = {
-  maxBytes: 10 * 1024 * 1024,
+  maxBytes: MAX_UPLOAD_TOTAL,
   mimes: ["image/jpeg", "image/png", "image/webp", "image/avif"] as const,
 };
 

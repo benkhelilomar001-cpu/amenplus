@@ -6,7 +6,8 @@ export function lp(locale: Locale, path = ""): string {
 }
 
 export function siteUrl(): string {
-  return (process.env.SITE_URL || "http://localhost:3000").replace(/\/$/, "");
+  // URL is set automatically by Netlify (the site's main address).
+  return (process.env.SITE_URL || process.env.URL || "http://localhost:3000").replace(/\/$/, "");
 }
 
 /** hreflang alternates for a path that exists in every language. */

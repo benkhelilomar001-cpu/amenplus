@@ -1,3 +1,4 @@
+import { PhotoInput } from "@/components/admin/PhotoInput";
 import Image from "next/image";
 import { requireAdmin } from "@/lib/auth";
 import { getSettings, siteImage } from "@/lib/settings";
@@ -88,7 +89,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                       <span className="absolute bottom-1 start-1 bg-[#f6e3c8] px-1.5 py-0.5 text-[0.65rem] text-[#7a4a12]">Inspiration</span>
                     )}
                   </div>
-                  <input type="file" name={field} accept="image/jpeg,image/png,image/webp,image/avif" className="text-sm" />
+                  <PhotoInput name={field} />
                   {!img.isInspiration && (
                     <div className="mt-2">
                       <Checkbox name={`${field}_reset`} label="Revenir au visuel provisoire" />

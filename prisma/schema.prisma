@@ -1,14 +1,17 @@
 // AmenPlus data model.
-// Local: SQLite. Production: switch `provider` to "postgresql" and set DATABASE_URL (see README).
-// String "enums" are validated in lib/constants.ts (SQLite has no native enums).
+// Postgres everywhere: Neon in production, a local PGlite server in dev (npm run db:local).
+// Status/type fields are plain strings validated in lib/constants.ts.
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // "rhel-openssl-3.0.x" = Netlify Functions (AWS Lambda, Amazon Linux 2023).
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url       = env("DATABASE_URL") // Neon: pooled URL (host contains "-pooler")
+  directUrl = env("DIRECT_URL") // Neon: direct URL, used by migrations
 }
 
 model Category {

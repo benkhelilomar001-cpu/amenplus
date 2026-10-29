@@ -21,11 +21,11 @@ export default async function QuotesPage({ searchParams }: { searchParams: Searc
     ...(q
       ? {
           OR: [
-            { reference: { contains: q } },
-            { name: { contains: q } },
-            { email: { contains: q } },
-            { phone: { contains: q } },
-            { company: { contains: q } },
+            { reference: { contains: q, mode: "insensitive" } },
+            { name: { contains: q, mode: "insensitive" } },
+            { email: { contains: q, mode: "insensitive" } },
+            { phone: { contains: q, mode: "insensitive" } },
+            { company: { contains: q, mode: "insensitive" } },
           ],
         }
       : {}),

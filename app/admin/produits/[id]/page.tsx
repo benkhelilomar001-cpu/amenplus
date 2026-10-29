@@ -1,3 +1,4 @@
+import { PhotoInput } from "@/components/admin/PhotoInput";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
@@ -138,9 +139,9 @@ export default async function ProductEdit({
         <Card>
           <h2 className="mb-1 font-display text-lg">Ajouter des photos</h2>
           <p className="mb-4 text-xs text-stone-ink">
-            JPG, PNG, WebP ou AVIF, {ADMIN_IMAGES.maxBytes / 1024 / 1024} Mo max par photo. Format carré conseillé (au moins 1600 × 1600 px).
+            JPG, PNG, WebP ou AVIF. Les photos sont allégées automatiquement ; jusqu&apos;à {ADMIN_IMAGES.maxBytes / 1024 / 1024} Mo par envoi. Format carré conseillé (au moins 1600 × 1600 px).
           </p>
-          <input type="file" name="photos" multiple accept="image/jpeg,image/png,image/webp,image/avif" className="text-sm" />
+          <PhotoInput name="photos" multiple />
         </Card>
 
         <div className="flex justify-end">
